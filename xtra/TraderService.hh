@@ -13,7 +13,9 @@ class TraderServiceCallback
  public:
   virtual void onRspError(int errord_id, const std::string& error_msg)= 0;
   
-  virtual void onRspOrderInsert(int order_ref)= 0;
+  virtual void onRspOrderInsert(int order_ref, bool is_success)= 0;
+
+  virtual void onErrRtnOrderInsert(int order_ref) = 0;
 
   virtual void onRtnOrder(int order_ref, const std::string& order_status, const std::string& status_msg) = 0;
 

@@ -111,23 +111,26 @@ void TraderSpiImpl::OnRspOrderInsert(CXeleFtdcInputOrderField *pInputOrder, CXel
 {
   XTRA_TRACE <<"TraderSpiImpl::OnRspOrderInsert()" ;
 
+  bool is_success = false;
   try
   {
     checkRspInfo(pRspInfo);
-    
-    XTRA_PDU <<*pInputOrder;
 
-    if( service_->callback() )
-    {
-      int order_ref = atoi(pInputOrder->OrderLocalID);
-      
-      service_->callback()->onRspOrderInsert( order_ref );
-    }
-
+    is_success = true;
   }
   catch( ... )
   {
   }
+
+  XTRA_PDU <<*pInputOrder;
+
+  if( service_->callback() )
+  {
+    int order_ref = atoi(pInputOrder->OrderLocalID);
+      
+    service_->callback()->onRspOrderInsert( order_ref, is_success );
+  }
+
 
 }
 
@@ -195,12 +198,21 @@ void TraderSpiImpl::OnErrRtnOrderInsert(CXeleFtdcInputOrderField *pInputOrder, C
   {
     checkRspInfo(pRspInfo);
     
-    XTRA_PDU <<*pInputOrder;
-
   }
   catch( ... )
   {
   }
+
+  XTRA_PDU <<*pInputOrder;
+
+  if( service_->callback() )
+  {
+    int order_ref = atoi(pInputOrder->OrderLocalID);
+      
+    service_->callback()->onErrRtnOrderInsert( order_ref );
+  }
+
+
 }
 
 void TraderSpiImpl::OnRspQryOrder(CXeleFtdcOrderField* pOrderField, CXeleFtdcRspInfoField* pRspInfo, int nRequestID, bool bIsLast)
