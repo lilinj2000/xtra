@@ -12,6 +12,7 @@ namespace xtra
 TraderServiceImpl::TraderServiceImpl(soil::Options* options, TraderServiceCallback* callback) :
     trader_api_(NULL),
     callback_(callback),
+    request_id_(0),
     max_order_ref_(-1)
 {
   XTRA_TRACE <<"TraderServiceImpl::TraderServiceImpl()" ;

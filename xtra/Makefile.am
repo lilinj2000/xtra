@@ -7,5 +7,5 @@ noinst_HEADERS =
 
 EXTRA_DIST = TraderService.hh
 
-headerdir = $(includedir)/zero
+headerdir = $(includedir)/xtra
 header_DATA = $(EXTRA_DIST)
