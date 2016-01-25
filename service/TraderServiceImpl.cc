@@ -387,7 +387,7 @@ CXeleFtdcInputOrderField* TraderServiceImpl::orderField(int& order_ref)
 {
   std::unique_ptr<CXeleFtdcInputOrderField> req( new CXeleFtdcInputOrderField() );
 
-  order_ref = max_order_ref_++;
+  order_ref = ++max_order_ref_;
   
   strncpy(req->ParticipantID, options_->participant_id.data(), sizeof(req->ParticipantID));
   strncpy(req->ClientID, options_->client_id.data(), sizeof(req->ClientID));
