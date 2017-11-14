@@ -1,117 +1,73 @@
-#include "gtest/gtest.h"
+// Copyright (c) 2010
+// All rights reserved.
 
-#include "service/XtraLog.hh"
+#include "gtest/gtest.h"
 #include "service/TraderServiceImpl.hh"
 
-namespace xtra
-{
+namespace xtra {
 
-class TraderServiceImplTest : public ::testing::Test
-{
+using soil::json::get_item_value;
+
+class TraderServiceImplTest
+    : public ::testing::Test,
+      public TraderCallback {
  public:
-  TraderServiceImplTest()
-  {
-  }
-  
-  void SetUp()
-  {
-    options_.reset( TraderService::createOptions() );
+  TraderServiceImplTest() {
+    rapidjson::Document config;
+    soil::json::load_from_file(&config, "trader.json");
+    soil::log::init(config);
 
-    std::auto_ptr<soil::Config> config( soil::Config::create() );
-    config->configFile() = "xtra.cfg";
-    config->registerOptions( options_.get() );
-    config->loadConfig();
+    get_item_value(&instru, config, "/test/instru");
+    get_item_value(&price, config, "/test/price");
+    get_item_value(&volume, config, "/test/volume");
 
-    XTRA_LOG_INIT("log.cfg");
+    cond.reset(soil::STimer::create());
 
-    cond_.reset( soil::STimer::create() );
-
-    service_.reset( TraderService::createService(options_.get(), NULL) );
-
+    service.reset(
+        TraderService::create(
+            config,
+            this));
   }
 
-  void TearDown()
-  {
+  void SetUp() {
+  }
+
+  void TearDown() {
+  }
+
+  void wait(int ms = 2000) {
+    cond->wait(ms);
+  }
+
+  void notify(bool is_last) {
+    if (is_last) {
+      cond->notifyAll();
+    }
   }
 
  protected:
-  std::auto_ptr<TraderService> service_;
-  
-  std::auto_ptr<soil::Options> options_;
-  
-  std::auto_ptr<soil::STimer> cond_;
+  std::unique_ptr<TraderService> service;
+  std::unique_ptr<soil::STimer> cond;
 
+  std::string instru;
+  double price;
+  int volume;
 };
 
-TEST_F(TraderServiceImplTest, loginTest)
-{
-  ASSERT_TRUE( true );
+TEST_F(TraderServiceImplTest, queryTest) {
+  service->queryAccount();
+
+  wait();
+
+  SUCCEED();
 }
 
-TEST_F(TraderServiceImplTest, orderOpenBuyTest)
-{
+TEST_F(TraderServiceImplTest, orderTest) {
+  service->openBuyOrderFOK(instru, price, volume);
 
-  std::string instru = "IF1510";
-  double price = 2889;
-  int volume = 1;
-  
-  service_->orderOpenBuy(instru, price, volume);
+  wait();
 
-  cond_->wait(2000);
-
-  ASSERT_TRUE(true);
+  SUCCEED();
 }
 
-TEST_F(TraderServiceImplTest, orderOpenBuyFAKTest)
-{
-
-  std::string instru = "IF1510";
-  double price = 3000;
-  int volume = 1;
-  
-  service_->orderOpenBuyFAK(instru, price, volume);
-
-  cond_->wait(2000);
-
-  ASSERT_TRUE(true);
-}
-
-TEST_F(TraderServiceImplTest, orderOpenBuyFOKTest)
-{
-
-  std::string instru = "cu1602";
-  double price = 42820;
-  int volume = 10;
-  
-  service_->orderOpenBuyFOK(instru, price, volume);
-
-  cond_->wait(2000);
-
-  ASSERT_TRUE(true);
-}
-
-TEST_F(TraderServiceImplTest, orderOpenSellFOKTest)
-{
-
-  std::string instru = "cu1602";
-  double price = 42820;
-  int volume = 10;
-  
-  service_->orderOpenSellFOK(instru, price, volume);
-
-  cond_->wait(2000);
-
-  ASSERT_TRUE(true);
-}
-
-TEST_F(TraderServiceImplTest, queryAccountTest)
-{
-
-  service_->queryAccount();
-
-  cond_->wait(2000);
-
-  ASSERT_TRUE(true);
-}
-
-}; 
+}  // namespace xtra

@@ -1,443 +1,298 @@
-#include "TraderServiceImpl.hh"
+// Copyright (c) 2010
+// All rights reserved.
 
-#include "XtraLog.hh"
+#include <cassert>
+
+#include "TraderServiceImpl.hh"
 #include "TraderOptions.hh"
 #include "TraderSpiImpl.hh"
+#include "soil/Macro.hh"
+#include "soil/Log.hh"
 
 #include "CXeleFtdcUserApiStructPrint.hh"
 
-namespace xtra
-{
+namespace xtra {
 
-TraderServiceImpl::TraderServiceImpl(soil::Options* options, TraderServiceCallback* callback) :
-    trader_api_(NULL),
+TraderServiceImpl::TraderServiceImpl(
+    const rapidjson::Document& doc,
+    TraderCallback* callback) :
+    trader_api_(nullptr),
     callback_(callback),
     request_id_(0),
-    max_order_ref_(-1)
-{
-  XTRA_TRACE <<"TraderServiceImpl::TraderServiceImpl()" ;
+    max_order_ref_(-1) {
+  SOIL_FUNC_TRACE;
 
-  cond_.reset( soil::STimer::create() );
+  cond_.reset(soil::STimer::create());
+  options_.reset(new TraderOptions(doc));;
 
-  options_ = dynamic_cast<TraderOptions*>(options);
-  
-  trader_api_ = CXeleTraderApi::CreateTraderApi(options_->exchange_id);
+  trader_api_ = CXeleTraderApi::CreateTraderApi(
+      options_->exchange_id);
+  assert(trader_api_ != nullptr);
 
-  trader_spi_.reset( new TraderSpiImpl(this) );
-  
-  trader_api_->RegisterSpi( trader_spi_.get() );
+  SOIL_INFO("the api version: {}", trader_api_->GetVersion());
+
+  trader_spi_.reset(new TraderSpiImpl(this));
+  trader_api_->RegisterSpi(trader_spi_.get());
 
   trader_api_->SubscribePrivateTopic(XELE_TERT_QUICK);
-  
   trader_api_->SubscribePublicTopic(XELE_TERT_QUICK);
 
-  trader_api_->RegisterFront( const_cast<char*>(options_->front_address.data()) );
+  trader_api_->RegisterFront(
+      const_cast<char*>(
+          options_->front_address.data()));
 
   trader_api_->Init();
-
   wait("login");
+
+  SOIL_INFO("trading day: {}", tradingDay());
 }
 
-TraderServiceImpl::~TraderServiceImpl()
-{
-  XTRA_TRACE <<"TraderServiceImpl::~TraderServiceImpl()" ;
-  
-  trader_api_->RegisterSpi(NULL);
-  
+TraderServiceImpl::~TraderServiceImpl() {
+  SOIL_FUNC_TRACE;
+
+  logout();
+  wait();
+
+  trader_api_->RegisterSpi(nullptr);
   trader_api_->Release();
-  
-  trader_api_ = NULL;
+  trader_api_ = nullptr;
 }
 
-
-std::string TraderServiceImpl::tradingDay()
-{
-  XTRA_TRACE <<"TraderServiceImpl::tradingDate()" ;
+std::string TraderServiceImpl::tradingDay() {
+  SOIL_FUNC_TRACE;
 
   return trading_day_;
 }
 
-int TraderServiceImpl::orderOpenBuy(const std::string& instru,
-                                    double price, int volume)
-{
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenBuy()" ;
+int32_t TraderServiceImpl::openBuyOrder(
+    const std::string& instru,
+    double price,
+    int volume) {
+  SOIL_FUNC_TRACE;
 
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  std::shared_ptr<CXeleFtdcInputOrderField>
+      req = reqOrderMessage(instru, price, volume);
 
-  int order_ref = -1;
-
-  std::unique_ptr<CXeleFtdcInputOrderField> req( orderField(order_ref) );
-
-  strncpy(req->InstrumentID, instru.data(), sizeof(req->InstrumentID));
-  req->Direction = XELE_FTDC_D_Buy;
-  req->LimitPrice = price;
-  req->VolumeTotalOriginal = volume;
-
-  try
-  {
-    orderGo( req.get() );
-  }
-  catch( ... )
-  {
-    throw std::runtime_error("order open buy failed.");
-  }
-  
-  return order_ref;
+  return orderGo(req);
 }
 
-int TraderServiceImpl::orderOpenBuyFAK(const std::string& instru,
-                                       double price, int volume)
-{
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenBuyFAK()" ;
+int32_t TraderServiceImpl::openBuyOrderFAK(
+    const std::string& instru,
+    double price,
+    int volume) {
+  SOIL_FUNC_TRACE;
 
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  std::shared_ptr<CXeleFtdcInputOrderField>
+      req = reqOrderMessage(
+          instru,
+          price,
+          volume,
+          XELE_FTDC_D_Buy,
+          XELE_FTDC_OF_Open,
+          XELE_FTDC_TC_IOC);
 
-  int order_ref = -1;
-
-  std::unique_ptr<CXeleFtdcInputOrderField> req( orderField(order_ref) );
-
-  strncpy(req->InstrumentID, instru.data(), sizeof(req->InstrumentID));
-  req->Direction = XELE_FTDC_D_Buy;
-  req->LimitPrice = price;
-  req->VolumeTotalOriginal = volume;
-
-  req->TimeCondition = XELE_FTDC_TC_IOC;
-  
-
-  try
-  {
-    orderGo( req.get() );
-  }
-  catch( ... )
-  {
-    throw std::runtime_error("order open buy FAK failed.");
-  }
-  
-  return order_ref;
-
+  return orderGo(req);
 }
 
-int TraderServiceImpl::orderOpenBuyFOK(const std::string& instru,
-                                       double price, int volume)
-{
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenBuyFOK()" ;
+int32_t TraderServiceImpl::openBuyOrderFOK(
+    const std::string& instru,
+    double price,
+    int volume) {
+  SOIL_FUNC_TRACE;
 
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  std::shared_ptr<CXeleFtdcInputOrderField>
+      req = reqOrderMessage(
+          instru,
+          price,
+          volume,
+          XELE_FTDC_D_Buy,
+          XELE_FTDC_OF_Open,
+          XELE_FTDC_TC_IOC,
+          XELE_FTDC_VC_CV);
 
-  int order_ref = -1;
-
-  std::unique_ptr<CXeleFtdcInputOrderField> req( orderField(order_ref) );
-
-  strncpy(req->InstrumentID, instru.data(), sizeof(req->InstrumentID));
-  req->Direction = XELE_FTDC_D_Buy;
-  req->LimitPrice = price;
-  req->VolumeTotalOriginal = volume;
-
-  req->TimeCondition = XELE_FTDC_TC_IOC;
-  req->VolumeCondition = XELE_FTDC_VC_CV;
-
-  try
-  {
-    orderGo( req.get() );
-  }
-  catch( ... )
-  {
-    throw std::runtime_error("order open buy FOK failed.");
-  }
-  
-  return order_ref;
-
+  return orderGo(req);
 }
 
-
-int TraderServiceImpl::orderOpenSell(const std::string& instru,
-                                      double price, int volume)
-{
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenSell()" ;
-
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
-
-  int order_ref = -1;
-
-  std::unique_ptr<CXeleFtdcInputOrderField> req( orderField(order_ref) );
-
-  strncpy(req->InstrumentID, instru.data(), sizeof(req->InstrumentID));
-  req->Direction = XELE_FTDC_D_Sell;
-  req->LimitPrice = price;
-  req->VolumeTotalOriginal = volume;
-
-  try
-  {
-    orderGo( req.get() );
-  }
-  catch( ... )
-  {
-    throw std::runtime_error("order open sell failed.");
-  }
-
-  return order_ref;
-}
-
-int TraderServiceImpl::orderOpenSellFAK(const std::string& instru,
-                                       double price, int volume)
-{
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenSellFAK()" ;
-
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
-
-  int order_ref = -1;
-
-  std::unique_ptr<CXeleFtdcInputOrderField> req( orderField(order_ref) );
-
-  strncpy(req->InstrumentID, instru.data(), sizeof(req->InstrumentID));
-  req->Direction = XELE_FTDC_D_Sell;
-  req->LimitPrice = price;
-  req->VolumeTotalOriginal = volume;
-
-  req->TimeCondition = XELE_FTDC_TC_IOC;
-  
-  try
-  {
-    orderGo( req.get() );
-  }
-  catch( ... )
-  {
-    throw std::runtime_error("order open sell FAK failed.");
-  }
-  
-  return order_ref;
-
-}
-
-int TraderServiceImpl::orderOpenSellFOK(const std::string& instru,
-                                       double price, int volume)
-{
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenSellFOK()" ;
-
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
-
-  int order_ref = -1;
-
-  std::unique_ptr<CXeleFtdcInputOrderField> req( orderField(order_ref) );
-
-  strncpy(req->InstrumentID, instru.data(), sizeof(req->InstrumentID));
-  req->Direction = XELE_FTDC_D_Sell;
-  req->LimitPrice = price;
-  req->VolumeTotalOriginal = volume;
-
-  req->TimeCondition = XELE_FTDC_TC_IOC;
-  req->VolumeCondition = XELE_FTDC_VC_CV;
-
-  try
-  {
-    orderGo( req.get() );
-  }
-  catch( ... )
-  {
-    throw std::runtime_error("order open sell FOK failed.");
-  }
-  
-  return order_ref;
-
-}
-
-
-int TraderServiceImpl::orderCloseBuy(const std::string& instru,
-                                     double price, int volume)
-{
-  XTRA_TRACE <<"TraderServiceImpl::orderCloseBuy()" ;
-
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
-
-  int order_ref = -1;
-
-  std::unique_ptr<CXeleFtdcInputOrderField> req( orderField(order_ref) );
-
-  strncpy(req->InstrumentID, instru.data(), sizeof(req->InstrumentID));
-  req->Direction = XELE_FTDC_D_Buy;
-  req->LimitPrice = price;
-  req->VolumeTotalOriginal = volume;
-  req->CombOffsetFlag[0] = XELE_FTDC_OF_CloseToday;
-
-  try
-  {
-    orderGo( req.get() );
-  }
-  catch( ... )
-  {
-    throw std::runtime_error("order close buy failed.");
-  }
-
-  return order_ref;
-
-}
-
-int TraderServiceImpl::orderCloseSell(const std::string& instru,
-                                     double price, int volume)
-{
-  XTRA_TRACE <<"TraderServiceImpl::orderCloseSell()" ;
-
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
-
-  int order_ref = -1;
-
-  std::unique_ptr<CXeleFtdcInputOrderField> req( orderField(order_ref) );
-
-  strncpy(req->InstrumentID, instru.data(), sizeof(req->InstrumentID));
-  req->Direction = XELE_FTDC_D_Sell;
-  req->LimitPrice = price;
-  req->VolumeTotalOriginal = volume;
-  req->CombOffsetFlag[0] = XELE_FTDC_OF_CloseToday;
-
-  try
-  {
-    orderGo( req.get() );
-  }
-  catch( ... )
-  {
-    throw std::runtime_error("order close sell failed.");
-  }
-
-  return order_ref;
-
-}
-
-int TraderServiceImpl::queryAccount()
-{
-  XTRA_TRACE <<"TraderServiceImpl::queryAccount()" ;
+void TraderServiceImpl::queryAccount() {
+  SOIL_FUNC_TRACE;
 
   CXeleFtdcQryClientAccountField req;
   memset(&req, 0x0, sizeof(req));
-  
-  strncpy( req.ClientID, options_->client_id.data(), sizeof(req.ClientID) );
 
-  XTRA_PDU <<req;
-  
-  int result = trader_api_->ReqQryClientAccount(&req, ++request_id_);
+  S_INPUT(&req,
+          CXeleFtdcQryClientAccountField,
+          ClientID,
+          options_->client_id.data());
+  S_INPUT(&req,
+          CXeleFtdcQryClientAccountField,
+          AccountID,
+          options_->account_id.data());
 
-  if( result!=0 )
-  {
-    XTRA_ERROR <<"return code " <<result;
-    throw std::runtime_error("query account failed.");
+  SOIL_DEBUG_PRINT(req);
+
+  int result = trader_api_->ReqQryClientAccount(
+      &req,
+      ++request_id_);
+
+  if (result != 0) {
+    throw std::runtime_error(
+        fmt::format("query account failed.\n"
+                    "return code is {}", result));
   }
-
 }
 
-void TraderServiceImpl::initSession(CXeleFtdcRspUserLoginField* pRspUserLogin)
-{
+void TraderServiceImpl::rspLogin(
+    CXeleFtdcRspUserLoginField* pRspUserLogin) {
+  SOIL_FUNC_TRACE;
+
   trading_day_ = pRspUserLogin->TradingDay;
-  
-  max_order_ref_ = atoi(pRspUserLogin->MaxOrderLocalID);;
+  max_order_ref_ = atoi(pRspUserLogin->MaxOrderLocalID);
 }
 
-void TraderServiceImpl::login()
-{
-  XTRA_TRACE <<"TraderServiceImpl::login()" ;
+void TraderServiceImpl::login() {
+  SOIL_FUNC_TRACE;
 
   CXeleFtdcReqUserLoginField req;
   memset(&req, 0x0, sizeof(req));
 
-  strncpy( req.UserID, options_->user_id.data(), sizeof(req.UserID) );
-  strncpy( req.ParticipantID, options_->participant_id.data(), sizeof(req.ParticipantID) );
-  strncpy( req.Password, options_->password.data(), sizeof(req.Password) );
+  S_INPUT(&req,
+          CXeleFtdcReqUserLoginField,
+          UserID,
+          options_->user_id.data());
+  S_INPUT(&req,
+          CXeleFtdcReqUserLoginField,
+          Password,
+          options_->password.data());
+  S_INPUT(&req,
+          CXeleFtdcReqUserLoginField,
+          ParticipantID,
+          options_->participant_id.data());
+  req.DataCenterID = 25;
 
-  XTRA_PDU <<req;
-  
-  int result = trader_api_->ReqUserLogin(&req, ++request_id_);
+  SOIL_DEBUG_PRINT(req);
 
-  if( result!=0 )
-  {
-    XTRA_ERROR <<"return code " <<result;
-    throw std::runtime_error("login failed.");
+  int result = trader_api_->ReqUserLogin(&req, 0);
+  if (result != 0) {
+    throw std::runtime_error(
+        fmt::format("login failed.\n"
+                    "return code is {}",
+                    result));
   }
-
 }
 
-void TraderServiceImpl::wait(const std::string& hint)
-{
-  if( cond_->wait(2000) )
-  {
-    if( !hint.empty() )
+void TraderServiceImpl::logout() {
+  SOIL_FUNC_TRACE;
+
+  CXeleFtdcReqUserLogoutField req;
+  memset(&req, 0x0, sizeof(req));
+
+  S_INPUT(&req,
+          CXeleFtdcReqUserLogoutField,
+          UserID,
+          options_->user_id.data());
+  S_INPUT(&req,
+          CXeleFtdcReqUserLogoutField,
+          ParticipantID,
+          options_->participant_id.data());
+  SOIL_DEBUG_PRINT(req);
+
+  int result = trader_api_->ReqUserLogout(
+      &req,
+      ++request_id_);
+  if (result != 0) {
+    throw std::runtime_error(
+        fmt::format("logout failed.\n"
+                    "return code is {}",
+                    result));
+  }
+}
+
+void TraderServiceImpl::wait(
+    const std::string& hint) {
+  if (cond_->wait(2000)) {
+    if (!hint.empty()) {
       throw std::runtime_error(hint + " time out");
+    }
   }
 }
 
-void TraderServiceImpl::notify()
-{
+void TraderServiceImpl::notify() {
   cond_->notifyAll();
 }
 
-CXeleFtdcInputOrderField* TraderServiceImpl::orderField(int& order_ref)
-{
-  std::unique_ptr<CXeleFtdcInputOrderField> req( new CXeleFtdcInputOrderField() );
+std::shared_ptr<CXeleFtdcInputOrderField>
+TraderServiceImpl::reqOrderMessage(
+      const std::string& instru,
+      double price,
+      int volume,
+      TXeleFtdcDirectionType direction,
+      TXeleFtdcOffsetFlagType offset_flag,
+      TXeleFtdcTimeConditionType time_condition,
+      TXeleFtdcVolumeConditionType volume_condition) {
+  SOIL_FUNC_TRACE;
 
-  order_ref = ++max_order_ref_;
-  
-  strncpy(req->ParticipantID, options_->participant_id.data(), sizeof(req->ParticipantID));
-  strncpy(req->ClientID, options_->client_id.data(), sizeof(req->ClientID));
-  strncpy(req->UserID, options_->user_id.data(), sizeof(req->UserID));
+  std::shared_ptr<CXeleFtdcInputOrderField> req(
+      new CXeleFtdcInputOrderField());
 
-  
+  S_INPUT(req.get(),
+          CXeleFtdcInputOrderField,
+          ParticipantID,
+          options_->participant_id.data());
+  S_INPUT(req.get(),
+          CXeleFtdcInputOrderField,
+          ClientID,
+          options_->client_id.data());
+  S_INPUT(req.get(),
+          CXeleFtdcInputOrderField,
+          UserID,
+          options_->user_id.data());
+  S_INPUT(req.get(),
+          CXeleFtdcInputOrderField,
+          InstrumentID,
+          instru.data());
   req->OrderPriceType = XELE_FTDC_OPT_LimitPrice;
-
-  // req->CombOffsetFlag[0] = XELE_FTDC_OF_Open;
-  req->CombOffsetFlag[0] = XELE_FTDC_OF_Open;
-  
-  req->CombHedgeFlag[0] = XELE_FTDC_OPT_AnyPrice;
-  req->TimeCondition = XELE_FTDC_TC_GFD;
-  req->VolumeCondition = XELE_FTDC_VC_AV;
+  req->Direction = direction;
+  req->CombOffsetFlag[0] = offset_flag;
+  req->CombHedgeFlag[0] = XELE_FTDC_HF_Speculation;
+  req->LimitPrice = price;
+  req->VolumeTotalOriginal = volume;
+  req->TimeCondition = time_condition;
+  req->VolumeCondition = volume_condition;
   req->MinVolume = 1;
   req->ContingentCondition = XELE_FTDC_CC_Immediately;
   req->ForceCloseReason = XELE_FTDC_FCC_NotForceClose;
-
-  char OrderRef[13];
-  snprintf(OrderRef, sizeof(OrderRef), "%d", order_ref);
-  strncpy(req->OrderLocalID, OrderRef, sizeof(req->OrderLocalID));
-
   req->IsAutoSuspend = 0;
 
-  return req.release();
+  return req;
 }
 
-void TraderServiceImpl::orderGo(CXeleFtdcInputOrderField* req)
-{
-  XTRA_TRACE <<"TraderServiceImpl::orderGo()";
-  
-  XTRA_PDU <<*req;
-  
-  int result = trader_api_->ReqOrderInsert(req, ++request_id_);
+int32_t TraderServiceImpl::orderGo(
+    std::shared_ptr<CXeleFtdcInputOrderField> req) {
+  SOIL_FUNC_TRACE;
 
-  if( result!=0 )
-  {
-    XTRA_ERROR <<"return code " <<result;
-    throw ;
+  int32_t order_ref = ++max_order_ref_;
+  S_INPUT(req.get(),
+          CXeleFtdcInputOrderField,
+          OrderLocalID,
+          orderLocalID(order_ref).data());
+  SOIL_DEBUG_PRINT(*req);
+
+  int result = trader_api_->ReqOrderInsert(
+      req.get(),
+      ++request_id_);
+  if (result != 0) {
+    throw std::runtime_error(
+        fmt::format("req order insert failed.\n"
+                    "return code is {}", result));
   }
+
+  return order_ref;
 }
 
-soil::Options* TraderService::createOptions()
-{
-  return new TraderOptions();
+TraderService* TraderService::create(
+    const rapidjson::Document& doc,
+    TraderCallback* callback) {
+  return new TraderServiceImpl(doc, callback);
 }
 
-TraderService* TraderService::createService(soil::Options* options, TraderServiceCallback* callback)
-{
-  return new TraderServiceImpl(options, callback);
-}
-
-} // namespace xtra
+}  // namespace xtra

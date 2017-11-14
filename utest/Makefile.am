@@ -8,10 +8,13 @@ unittest_SOURCES = \
 	TraderServiceImplTest.cc
 
 
-unittest_CPPFLAGS = -I$(top_srcdir) -I.. -I..\
+unittest_CPPFLAGS = -I$(top_srcdir) \
 		$(BOOST_CPPFLAGS) \
 		$(XELE_CPPFLAGS) \
 		$(GTEST_CPPFLAGS) \
+		$(RAPIDJSON_CPPFLAGS) \
+		$(FMT_CPPFLAGS) \
+		$(SPDLOG_CPPFLAGS) \
 		$(SOIL_CPPFLAGS)
 
 
@@ -20,6 +23,7 @@ unittest_LDADD = \
 	../service/libxtra.la \
 	$(BOOST_LIBADD) \
 	$(XELE_LIBADD) \
+	$(FMT_LIBADD) \
 	$(SOIL_LIBADD)
 
 

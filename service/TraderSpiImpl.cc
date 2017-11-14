@@ -1,272 +1,367 @@
+// Copyright (c) 2010
+// All rights reserved.
+
+#include "fmt/format.h"
 #include "TraderSpiImpl.hh"
-#include "TraderServiceImpl.hh"
-#include "TraderOptions.hh"
-#include "XtraLog.hh"
+#include "soil/Log.hh"
 
 #include "CXeleFtdcUserApiStructPrint.hh"
 
-namespace xtra
-{
+namespace xtra {
 
-TraderSpiImpl::TraderSpiImpl(TraderServiceImpl* service) :
-    service_(service)
-{
-  XTRA_TRACE <<"TraderSpiImpl::TraderSpiImpl()" ;
+TraderSpiImpl::TraderSpiImpl(
+    TraderServiceImpl* service) :
+    service_(service) {
+  SOIL_FUNC_TRACE;
 }
 
-TraderSpiImpl::~TraderSpiImpl()
-{
-  XTRA_TRACE <<"TraderSpiImpl::~TraderSpiImpl()" ;
+TraderSpiImpl::~TraderSpiImpl() {
+  SOIL_FUNC_TRACE;
 }
 
 /////////////////////////////////////////
 // impl from CXeleTraderSpi
 /////////////////////////////////////////
-void TraderSpiImpl::OnFrontConnected()
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnFrontConnected()" ;
+void TraderSpiImpl::OnFrontConnected() {
+  SOIL_FUNC_TRACE;
 
   service_->login();
 }
 
-void TraderSpiImpl::OnFrontDisconnected(int nReason)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnFrontDisconnected()" ;
+void TraderSpiImpl::OnFrontDisconnected(
+    int nReason) {
+  SOIL_FUNC_TRACE;
 
-  XTRA_INFO <<"OnFrontDisconnected, the Reason is " <<std::hex <<nReason ;
+  SOIL_DEBUG_PRINT(nReason);
 }
 
-void TraderSpiImpl::OnPackageStart(int nTopicID, int nSequenceNo)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnPackageStart()" ;
+void TraderSpiImpl::OnPackageStart(
+    int nTopicID,
+    int nSequenceNo) {
+  SOIL_FUNC_TRACE;
 
-  XTRA_INFO <<"nTopicID: " <<nTopicID
-            <<" nSequenceNo:" <<nSequenceNo;
+  SOIL_DEBUG_PRINT(nTopicID);
+  SOIL_DEBUG_PRINT(nSequenceNo);
 }
 
-void TraderSpiImpl::OnPackageEnd(int nTopicID, int nSequenceNo)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnPackageEnd()" ;
+void TraderSpiImpl::OnPackageEnd(
+    int nTopicID,
+    int nSequenceNo) {
+  SOIL_FUNC_TRACE;
 
-  XTRA_INFO <<"nTopicID: " <<nTopicID
-            <<" nSequenceNo:" <<nSequenceNo;
+  SOIL_DEBUG_PRINT(nTopicID);
+  SOIL_DEBUG_PRINT(nSequenceNo);
 }
 
-void TraderSpiImpl::OnRspError(CXeleFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspError()" ;
+void TraderSpiImpl::OnRspError(
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  if( pRspInfo )
-    XTRA_PDU <<*pRspInfo;
-  
+  if (callback()) {
+    callback()->onRspError(
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
+  }
 }
 
-void TraderSpiImpl::OnRspUserLogin(CXeleFtdcRspUserLoginField *pRspUserLogin,
-                           CXeleFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspUserLogin()" ;
+void TraderSpiImpl::OnRspUserLogin(
+    CXeleFtdcRspUserLoginField* pRspUserLogin,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  try
-  {
-    checkRspInfo(pRspInfo);
-    
-    XTRA_PDU <<*pRspUserLogin;
-
-    service_->initSession( pRspUserLogin );
-                          
-    if( bIsLast )
-      service_->notify();
-
+  if (callback()) {
+    callback()->onRspUserLogin(
+        pRspUserLogin ? fmt::format("{}", *pRspUserLogin) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
   }
-  catch( ... )
-  {
+
+  if (pRspInfo->ErrorID != 0) {
+    SOIL_ERROR("login failed.\n{}", *pRspInfo);
+  } else {
+    service_->rspLogin(pRspUserLogin);
+    service_->notify();
   }
-  
 }
 
-void TraderSpiImpl::OnRspUserLogout(CXeleFtdcRspUserLogoutField *pRspUserLogout,
-                                    CXeleFtdcRspInfoField *pRspInfo,
-                                    int nRequestID,
-                                    bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspUserLogout()" ;
+void TraderSpiImpl::OnRspUserLogout(
+    CXeleFtdcRspUserLogoutField* pRspUserLogout,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  try
-  {
-    checkRspInfo(pRspInfo);
-    
-    XTRA_PDU <<*pRspUserLogout;
-
-    if( bIsLast )
-      service_->notify();
-
-  }
-  catch( ... )
-  {
+  if (callback()) {
+    callback()->onRspUserLogout(
+        pRspUserLogout ? fmt::format("{}", *pRspUserLogout) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
   }
 
+  service_->notify();
 }
 
-void TraderSpiImpl::OnRspOrderInsert(CXeleFtdcInputOrderField *pInputOrder, CXeleFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspOrderInsert()" ;
+void TraderSpiImpl::OnRspOrderInsert(
+    CXeleFtdcInputOrderField* pInputOrder,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  bool is_success = false;
-  try
-  {
-    checkRspInfo(pRspInfo);
-
-    is_success = true;
+  if (callback()) {
+    callback()->onRspOrderInsert(
+        pInputOrder ? fmt::format("{}", *pInputOrder) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
   }
-  catch( ... )
-  {
-  }
-
-  XTRA_PDU <<*pInputOrder;
-
-  if( service_->callback() )
-  {
-    int order_ref = atoi(pInputOrder->OrderLocalID);
-      
-    service_->callback()->onRspOrderInsert( order_ref, is_success );
-  }
-
-
 }
 
-void TraderSpiImpl::OnRspQryClientAccount(CXeleFtdcRspClientAccountField *pClientAccount, CXeleFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspQryClientAccount()" ;
+void TraderSpiImpl::OnRspOrderAction(
+    CXeleFtdcOrderActionField* pOrderAction,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  try
-  {
-    checkRspInfo(pRspInfo);
-    
-    XTRA_PDU <<*pClientAccount;
+  if (callback()) {
+    callback()->onRspOrderAction(
+        pOrderAction ? fmt::format("{}", *pOrderAction) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
   }
-  catch( ... )
-  {
-  }
-
 }
 
-void TraderSpiImpl::OnRtnTrade(CXeleFtdcTradeField *pTrade)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRtnTrade()" ;
+void TraderSpiImpl::OnRspQryClientPosition(
+    CXeleFtdcRspClientPositionField* pRspClientPosition,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  if( pTrade )
-    XTRA_PDU <<*pTrade;
-
-  if( service_->callback() )
-  {
-    int order_ref = atoi(pTrade->OrderLocalID);
-
-    double price = pTrade->Price;
-    double volume = pTrade->Volume;
-    
-    service_->callback()->onRtnTrade( order_ref, price, volume );
+  if (callback()) {
+    callback()->onRspQryClientPosition(
+        pRspClientPosition ? fmt::format("{}", *pRspClientPosition) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
   }
-
 }
 
-void TraderSpiImpl::OnRtnOrder(CXeleFtdcOrderField *pOrder)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRtnOrder()" ;
+void TraderSpiImpl::OnRspQryInstrument(
+    CXeleFtdcRspInstrumentField* pRspInstrument,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  if( pOrder )
-    XTRA_PDU <<*pOrder;
-
-  if( service_->callback() )
-  {
-    int order_ref = atoi(pOrder->OrderLocalID);
-
-    std::string order_status;
-    order_status.push_back(pOrder->OrderStatus);
-    std::string status_msg;
-    
-    service_->callback()->onRtnOrder( order_ref, order_status, status_msg );
+  if (callback()) {
+    callback()->onRspQryInstrument(
+        pRspInstrument ? fmt::format("{}", *pRspInstrument) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
   }
-  
 }
 
+void TraderSpiImpl::OnRspQryClientAccount(
+    CXeleFtdcRspClientAccountField* pClientAccount,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-void TraderSpiImpl::OnErrRtnOrderInsert(CXeleFtdcInputOrderField *pInputOrder, CXeleFtdcRspInfoField *pRspInfo)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OneErrRtnOrderInsert()" ;
-
-  try
-  {
-    checkRspInfo(pRspInfo);
-    
+  if (callback()) {
+    callback()->onRspQryClientAccount(
+        pClientAccount ? fmt::format("{}", *pClientAccount) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
   }
-  catch( ... )
-  {
-  }
-
-  XTRA_PDU <<*pInputOrder;
-
-  if( service_->callback() )
-  {
-    int order_ref = atoi(pInputOrder->OrderLocalID);
-      
-    service_->callback()->onErrRtnOrderInsert( order_ref );
-  }
-
-
 }
 
-void TraderSpiImpl::OnRspQryOrder(CXeleFtdcOrderField* pOrderField, CXeleFtdcRspInfoField* pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspQryOrder()";
-  
-  try
-  {
-    checkRspInfo(pRspInfo);
-    
-    XTRA_PDU <<*pOrderField;
-  }
-  catch( ... )
-  {
-  }
+void TraderSpiImpl::OnRspQryInstrumentMarginRate(
+    CXeleFtdcRspInstrumentMarginRateField* pRspInstrumentMarginRate,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  
+  if (callback()) {
+    callback()->onRspQryInstrumentMarginRate(
+        pRspInstrumentMarginRate ? fmt::format("{}", *pRspInstrumentMarginRate) : "", // NOLINT
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
+  }
 }
 
-void TraderSpiImpl::OnRspQryTrade(CXeleFtdcTradeField* pTradeField, CXeleFtdcRspInfoField* pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspQryTrade()";
-  
-  try
-  {
-    checkRspInfo(pRspInfo);
-    
-    XTRA_PDU <<*pTradeField;
-  }
-  catch( ... )
-  {
-  }
+void TraderSpiImpl::OnRspQryInstrumentCommissionRate(
+    CXeleFtdcRspInstrumentCommissionRateField* pRspInstrumentCommissionRate,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
+  if (callback()) {
+    callback()->onRspQryInstrumentCommissionRate(
+        pRspInstrumentCommissionRate ? fmt::format("{}", *pRspInstrumentCommissionRate) : "", // NOLINT
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
+  }
 }
 
-void TraderSpiImpl::checkRspInfo(CXeleFtdcRspInfoField *pRspInfo)
-{
-  XTRA_TRACE <<"TraderSpiImpl::checkRspInfo()" ;
+void TraderSpiImpl::OnRspUserPasswordUpdate(
+    CXeleFtdcUserPasswordUpdateField* pUserPasswordUpdate,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  if( pRspInfo )
-    XTRA_PDU <<*pRspInfo ;
-  
-  bool result = ((pRspInfo) && (pRspInfo->ErrorID != 0));
-  
-  if (result)
-  {
-    std::stringstream err_stream;
-    err_stream <<"ErrorID=" <<pRspInfo->ErrorID <<","
-               <<"ErrorMsg=" <<pRspInfo->ErrorMsg;
-
-    throw std::runtime_error(err_stream.str());
+  if (callback()) {
+    callback()->onRspUserPasswordUpdate(
+        pUserPasswordUpdate ? fmt::format("{}", *pUserPasswordUpdate) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
   }
-  
 }
 
+void TraderSpiImpl::OnRtnTrade(
+    CXeleFtdcTradeField* pTrade) {
+  SOIL_FUNC_TRACE;
 
-} // namespace xtra
+  if (callback()) {
+    callback()->onRtnTrade(
+        pTrade ? fmt::format("{}", *pTrade) : "");
+  }
+}
+
+void TraderSpiImpl::OnRtnOrder(
+    CXeleFtdcOrderField* pOrder) {
+  SOIL_FUNC_TRACE;
+
+  if (callback()) {
+    callback()->onRtnOrder(
+        pOrder ? fmt::format("{}", *pOrder) : "");
+  }
+}
+
+void TraderSpiImpl::OnRtnInstrumentStatus(
+    CXeleFtdcInstrumentStatusField* pInstrumentStatus) {
+  SOIL_FUNC_TRACE;
+
+  if (callback()) {
+    callback()->onRtnInstrumentStatus(
+        pInstrumentStatus ? fmt::format("{}", *pInstrumentStatus) : "");
+  }
+}
+
+void TraderSpiImpl::OnRtnInsInstrument(
+    CXeleFtdcInstrumentField* pInstrument) {
+  SOIL_FUNC_TRACE;
+
+  if (callback()) {
+    callback()->onRtnInsInstrument(
+        pInstrument ? fmt::format("{}", *pInstrument) : "");
+  }
+}
+
+void TraderSpiImpl::OnErrRtnOrderInsert(
+    CXeleFtdcInputOrderField* pInputOrder,
+    CXeleFtdcRspInfoField* pRspInfo) {
+  SOIL_FUNC_TRACE;
+
+  if (callback()) {
+    callback()->onErrRtnOrderInsert(
+        pInputOrder ? fmt::format("{}", *pInputOrder) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "");
+  }
+}
+
+void TraderSpiImpl::OnErrRtnOrderAction(
+    CXeleFtdcOrderActionField* pOrderAction,
+    CXeleFtdcRspInfoField* pRspInfo) {
+  SOIL_FUNC_TRACE;
+
+  if (callback()) {
+    callback()->onErrRtnOrderAction(
+        pOrderAction ? fmt::format("{}", *pOrderAction) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "");
+  }
+}
+
+void TraderSpiImpl::OnRspQryOrder(
+    CXeleFtdcOrderField* pOrderField,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
+
+  if (callback()) {
+    callback()->onRspQryOrder(
+        pOrderField ? fmt::format("{}", *pOrderField) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
+  }
+}
+
+void TraderSpiImpl::OnRspQryTrade(
+    CXeleFtdcTradeField* pTradeField,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
+
+  if (callback()) {
+    callback()->onRspQryTrade(
+        pTradeField ? fmt::format("{}", *pTradeField) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
+  }
+}
+
+void TraderSpiImpl::OnRspInstrumentPrice(
+    CXeleFtdcRspInstrumentPriceField* pTradeField,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
+
+  if (callback()) {
+    callback()->onRspInstrumentPrice(
+        pTradeField ? fmt::format("{}", *pTradeField) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
+  }
+}
+
+void TraderSpiImpl::OnRspQryExchangeFront(
+    CXeleFtdcRspExchangeFrontField* pRspExchangeFront,
+    CXeleFtdcRspInfoField* pRspInfo,
+    int nRequestID,
+    bool bIsLast) {
+  SOIL_FUNC_TRACE;
+
+  if (callback()) {
+    callback()->onRspQryExchangeFront(
+        pRspExchangeFront ? fmt::format("{}", *pRspExchangeFront) : "",
+        pRspInfo ? fmt::format("{}", *pRspInfo) : "",
+        nRequestID,
+        bIsLast);
+  }
+}
+
+}  // namespace xtra
