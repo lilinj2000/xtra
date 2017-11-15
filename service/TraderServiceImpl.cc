@@ -167,7 +167,7 @@ void TraderServiceImpl::login() {
           CXeleFtdcReqUserLoginField,
           ParticipantID,
           options_->participant_id.data());
-  req.DataCenterID = 25;
+  // req.DataCenterID = 25;
 
   SOIL_DEBUG_PRINT(req);
 

@@ -14,7 +14,7 @@ class TraderServiceImplTest
  public:
   TraderServiceImplTest() {
     rapidjson::Document config;
-    soil::json::load_from_file(&config, "trader.json");
+    soil::json::load_from_file(&config, "xtra.json");
     soil::log::init(config);
 
     get_item_value(&instru, config, "/test/instru");

@@ -1,10 +1,7 @@
 #! /bin/sh
 
-home_libs=~/libs
-
-if test -d /llj/libs ; then
-   home_libs=/llj/libs
-fi
+node=`uname -n`
+home_libs=~/libs/${node}
 
 home_xtra=${home_libs}/xtra
 

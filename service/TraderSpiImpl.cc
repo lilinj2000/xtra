@@ -32,7 +32,8 @@ void TraderSpiImpl::OnFrontDisconnected(
     int nReason) {
   SOIL_FUNC_TRACE;
 
-  SOIL_DEBUG_PRINT(nReason);
+  SOIL_ERROR("OnFrontDisconnected: {:#x}",
+             nReason);
 }
 
 void TraderSpiImpl::OnPackageStart(

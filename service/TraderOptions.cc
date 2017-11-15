@@ -11,25 +11,25 @@ TraderOptions::TraderOptions(
     const rapidjson::Document& doc) {
   get_item_value(&exchange_id,
                  doc,
-                 "/xtra_trader/exchange_id");
+                 "/xtra/exchange_id");
   get_item_value(&participant_id,
                  doc,
-                 "/xtra_trader/participant_id");
+                 "/xtra/participant_id");
   get_item_value(&user_id,
                  doc,
-                 "/xtra_trader/user_id");
+                 "/xtra/user_id");
   get_item_value(&password,
                  doc,
-                 "/xtra_trader/password");
+                 "/xtra/password");
   get_item_value(&client_id,
                  doc,
-                 "/xtra_trader/client_id");
+                 "/xtra/client_id");
   get_item_value(&account_id,
                  doc,
-                 "/xtra_trader/account_id");
+                 "/xtra/account_id");
   get_item_value(&front_address,
                  doc,
-                 "/xtra_trader/front_address");
+                 "/xtra/front_address");
   return;
 }
 

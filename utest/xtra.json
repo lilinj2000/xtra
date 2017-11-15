@@ -1,0 +1,35 @@
+{
+    "log": {
+        "level": "trace", 
+        "sinks": [
+            {
+                "sink": {
+                    "level": "trace", 
+                    "type": "stdout_sink_mt"
+                }
+            }, 
+            {
+                "sink": {
+                    "file_name": "xtra.log", 
+                    "max_file_size": 5000000, 
+                    "max_files": 10, 
+                    "type": "rotating_file_sink_mt"
+                }
+            }
+        ]
+    }, 
+    "test": {
+        "instru": "cu1712", 
+        "price": 35670, 
+        "volume": 10
+    }, 
+    "xtra": {
+        "account_id": "88991042", 
+        "client_id": "88991042d", 
+        "exchange_id": 1, 
+        "front_address": "tcp://127.0.0.1:122", 
+        "participant_id": "0148", 
+        "password": "1", 
+        "user_id": "88991042d"
+    }
+}
