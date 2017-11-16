@@ -70,4 +70,16 @@ TEST_F(TraderServiceImplTest, orderTest) {
   SUCCEED();
 }
 
+TEST_F(TraderServiceImplTest, orderContinueTest) {
+  int count = 0;
+
+  do {
+    service->openBuyOrderFOK(instru, price, volume);
+
+    wait();
+  }while(++count < 5);
+
+  SUCCEED();
+}
+
 }  // namespace xtra
