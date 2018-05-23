@@ -453,7 +453,7 @@ void TraderServiceImpl::orderGo(CXeleFtdcInputOrderField* req)
   }
 }
 
-TraderService* TraderService::createService(
+TraderService* TraderService::create(
   const rapidjson::Document& doc, 
   TraderServiceCallback* callback) {
   return new TraderServiceImpl(doc, callback);

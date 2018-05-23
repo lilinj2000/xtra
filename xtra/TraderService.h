@@ -86,7 +86,7 @@ class TraderService
   
   virtual ~TraderService() {}
   
-  static TraderService* createService(
+  static TraderService* create(
     const rapidjson::Document& doc, 
     TraderServiceCallback* callback);
 
