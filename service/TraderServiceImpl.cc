@@ -1,26 +1,50 @@
-#include "TraderServiceImpl.hh"
+// Copyright 2017 The Xtra Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// -----------------------------------------------------------------------------
+// File: [file_name]
+// -----------------------------------------------------------------------------
+//
+// [file_descrition]
+//
+// Example:
+//
+//   ... ...
+//
+//
 
-#include "XtraLog.hh"
-#include "TraderOptions.hh"
-#include "TraderSpiImpl.hh"
+#include "service/TraderServiceImpl.h"
+#include "service/TraderOptions.h"
+#include "service/TraderSpiImpl.h"
+#include "service/CXeleFtdcUserApiStructPrint.h"
+#include "soil/log.h"
 
-#include "CXeleFtdcUserApiStructPrint.hh"
+namespace xtra {
 
-namespace xtra
-{
-
-TraderServiceImpl::TraderServiceImpl(soil::Options* options, TraderServiceCallback* callback) :
+TraderServiceImpl::TraderServiceImpl(const rapidjson::Document& doc,
+  TraderServiceCallback* callback) :
     trader_api_(NULL),
     callback_(callback),
     request_id_(0),
     max_order_ref_(-1)
 {
-  XTRA_TRACE <<"TraderServiceImpl::TraderServiceImpl()" ;
+  SOIL_FUNC_TRACE;
 
   cond_.reset( soil::STimer::create() );
 
-  options_ = dynamic_cast<TraderOptions*>(options);
-  
+  options_.reset(new TraderOptions(doc));
+
   trader_api_ = CXeleTraderApi::CreateTraderApi(options_->exchange_id);
 
   trader_spi_.reset( new TraderSpiImpl(this) );
@@ -40,7 +64,7 @@ TraderServiceImpl::TraderServiceImpl(soil::Options* options, TraderServiceCallba
 
 TraderServiceImpl::~TraderServiceImpl()
 {
-  XTRA_TRACE <<"TraderServiceImpl::~TraderServiceImpl()" ;
+  SOIL_FUNC_TRACE;
   
   trader_api_->RegisterSpi(NULL);
   
@@ -52,7 +76,7 @@ TraderServiceImpl::~TraderServiceImpl()
 
 std::string TraderServiceImpl::tradingDay()
 {
-  XTRA_TRACE <<"TraderServiceImpl::tradingDate()" ;
+  SOIL_FUNC_TRACE;
 
   return trading_day_;
 }
@@ -60,11 +84,11 @@ std::string TraderServiceImpl::tradingDay()
 int TraderServiceImpl::orderOpenBuy(const std::string& instru,
                                     double price, int volume)
 {
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenBuy()" ;
+  SOIL_FUNC_TRACE;
 
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  SOIL_DEBUG_PRINT(instru);
+  SOIL_DEBUG_PRINT(price);
+  SOIL_DEBUG_PRINT(volume);
 
   int order_ref = -1;
 
@@ -90,11 +114,11 @@ int TraderServiceImpl::orderOpenBuy(const std::string& instru,
 int TraderServiceImpl::orderOpenBuyFAK(const std::string& instru,
                                        double price, int volume)
 {
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenBuyFAK()" ;
+  SOIL_FUNC_TRACE;
 
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  SOIL_DEBUG_PRINT(instru);
+  SOIL_DEBUG_PRINT(price);
+  SOIL_DEBUG_PRINT(volume);
 
   int order_ref = -1;
 
@@ -124,11 +148,11 @@ int TraderServiceImpl::orderOpenBuyFAK(const std::string& instru,
 int TraderServiceImpl::orderOpenBuyFOK(const std::string& instru,
                                        double price, int volume)
 {
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenBuyFOK()" ;
+  SOIL_FUNC_TRACE;
 
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  SOIL_DEBUG_PRINT(instru);
+  SOIL_DEBUG_PRINT(price);
+  SOIL_DEBUG_PRINT(volume);
 
   int order_ref = -1;
 
@@ -159,11 +183,11 @@ int TraderServiceImpl::orderOpenBuyFOK(const std::string& instru,
 int TraderServiceImpl::orderOpenSell(const std::string& instru,
                                       double price, int volume)
 {
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenSell()" ;
+  SOIL_FUNC_TRACE;
 
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  SOIL_DEBUG_PRINT(instru);
+  SOIL_DEBUG_PRINT(price);
+  SOIL_DEBUG_PRINT(volume);
 
   int order_ref = -1;
 
@@ -189,11 +213,10 @@ int TraderServiceImpl::orderOpenSell(const std::string& instru,
 int TraderServiceImpl::orderOpenSellFAK(const std::string& instru,
                                        double price, int volume)
 {
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenSellFAK()" ;
-
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  SOIL_FUNC_TRACE;
+  SOIL_DEBUG_PRINT(instru);
+  SOIL_DEBUG_PRINT(price);
+  SOIL_DEBUG_PRINT(volume);
 
   int order_ref = -1;
 
@@ -222,11 +245,11 @@ int TraderServiceImpl::orderOpenSellFAK(const std::string& instru,
 int TraderServiceImpl::orderOpenSellFOK(const std::string& instru,
                                        double price, int volume)
 {
-  XTRA_TRACE <<"TraderServiceImpl::orderOpenSellFOK()" ;
+  SOIL_FUNC_TRACE;
 
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  SOIL_DEBUG_PRINT(instru);
+  SOIL_DEBUG_PRINT(price);
+  SOIL_DEBUG_PRINT(volume);
 
   int order_ref = -1;
 
@@ -257,11 +280,11 @@ int TraderServiceImpl::orderOpenSellFOK(const std::string& instru,
 int TraderServiceImpl::orderCloseBuy(const std::string& instru,
                                      double price, int volume)
 {
-  XTRA_TRACE <<"TraderServiceImpl::orderCloseBuy()" ;
+  SOIL_FUNC_TRACE;
 
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  SOIL_DEBUG_PRINT(instru);
+  SOIL_DEBUG_PRINT(price);
+  SOIL_DEBUG_PRINT(volume);
 
   int order_ref = -1;
 
@@ -289,11 +312,11 @@ int TraderServiceImpl::orderCloseBuy(const std::string& instru,
 int TraderServiceImpl::orderCloseSell(const std::string& instru,
                                      double price, int volume)
 {
-  XTRA_TRACE <<"TraderServiceImpl::orderCloseSell()" ;
+  SOIL_FUNC_TRACE;
 
-  XTRA_DEBUG <<"instru: " <<instru
-            <<"\t price: " <<price
-            <<"\t volume: " <<volume;
+  SOIL_DEBUG_PRINT(instru);
+  SOIL_DEBUG_PRINT(price);
+  SOIL_DEBUG_PRINT(volume);
 
   int order_ref = -1;
 
@@ -320,20 +343,20 @@ int TraderServiceImpl::orderCloseSell(const std::string& instru,
 
 int TraderServiceImpl::queryAccount()
 {
-  XTRA_TRACE <<"TraderServiceImpl::queryAccount()" ;
+  SOIL_FUNC_TRACE;
 
   CXeleFtdcQryClientAccountField req;
   memset(&req, 0x0, sizeof(req));
   
   strncpy( req.ClientID, options_->client_id.data(), sizeof(req.ClientID) );
 
-  XTRA_PDU <<req;
+  SOIL_DEBUG_PRINT(req);
   
   int result = trader_api_->ReqQryClientAccount(&req, ++request_id_);
 
   if( result!=0 )
   {
-    XTRA_ERROR <<"return code " <<result;
+    SOIL_ERROR("return code {}", result);
     throw std::runtime_error("query account failed.");
   }
 
@@ -348,7 +371,7 @@ void TraderServiceImpl::initSession(CXeleFtdcRspUserLoginField* pRspUserLogin)
 
 void TraderServiceImpl::login()
 {
-  XTRA_TRACE <<"TraderServiceImpl::login()" ;
+  SOIL_FUNC_TRACE;
 
   CXeleFtdcReqUserLoginField req;
   memset(&req, 0x0, sizeof(req));
@@ -357,13 +380,13 @@ void TraderServiceImpl::login()
   strncpy( req.ParticipantID, options_->participant_id.data(), sizeof(req.ParticipantID) );
   strncpy( req.Password, options_->password.data(), sizeof(req.Password) );
 
-  XTRA_PDU <<req;
+  SOIL_DEBUG_PRINT(req);
   
   int result = trader_api_->ReqUserLogin(&req, ++request_id_);
 
   if( result!=0 )
   {
-    XTRA_ERROR <<"return code " <<result;
+    SOIL_ERROR("return code {}", result);
     throw std::runtime_error("login failed.");
   }
 
@@ -417,27 +440,23 @@ CXeleFtdcInputOrderField* TraderServiceImpl::orderField(int& order_ref)
 
 void TraderServiceImpl::orderGo(CXeleFtdcInputOrderField* req)
 {
-  XTRA_TRACE <<"TraderServiceImpl::orderGo()";
+  SOIL_FUNC_TRACE;
   
-  XTRA_PDU <<*req;
+  SOIL_DEBUG_IF_PRINT(req);
   
   int result = trader_api_->ReqOrderInsert(req, ++request_id_);
 
   if( result!=0 )
   {
-    XTRA_ERROR <<"return code " <<result;
+    SOIL_ERROR("return code {}", result);
     throw ;
   }
 }
 
-soil::Options* TraderService::createOptions()
-{
-  return new TraderOptions();
-}
-
-TraderService* TraderService::createService(soil::Options* options, TraderServiceCallback* callback)
-{
-  return new TraderServiceImpl(options, callback);
+TraderService* TraderService::createService(
+  const rapidjson::Document& doc, 
+  TraderServiceCallback* callback) {
+  return new TraderServiceImpl(doc, callback);
 }
 
 } // namespace xtra

@@ -1,9 +1,35 @@
-#ifndef XTRA_TRADER_SERVICE_HH
-#define XTRA_TRADER_SERVICE_HH
+// Copyright 2017 The Xtra Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// -----------------------------------------------------------------------------
+// File: [file_name]
+// -----------------------------------------------------------------------------
+//
+// [file_descrition]
+//
+// Example:
+//
+//   ... ...
+//
+//
+
+#ifndef XTRA_TRADER_SERVICE_H_
+#define XTRA_TRADER_SERVICE_H_
 
 #include <string>
 
-#include "soil/Config.hh"
+#include "soil/json.h"
 
 namespace xtra
 {
@@ -59,10 +85,10 @@ class TraderService
   virtual int queryAccount() = 0;
   
   virtual ~TraderService() {}
-
-  static soil::Options* createOptions();
   
-  static TraderService* createService(soil::Options* options, TraderServiceCallback* callback);
+  static TraderService* createService(
+    const rapidjson::Document& doc, 
+    TraderServiceCallback* callback);
 
 };
 

@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "service/XtraLog.hh"
-#include "service/TraderServiceImpl.hh"
+#include "soil/log.h"
+#include "service/TraderServiceImpl.h"
 
 namespace xtra
 {

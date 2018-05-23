@@ -24,38 +24,32 @@
 //
 //
 
-#include "service/TraderOptions.h"
+#ifndef SERVICE_TRADER_OPTIONS_H_
+#define SERVICE_TRADER_OPTIONS_H_
+
+#include <string>
+#include "soil/json.h"
 
 namespace xtra {
 
-using soil::json::get_item_value;
-
-TraderOptions::TraderOptions(const rapidjson::Document& doc) {
+class TraderOptions {
+ public:
+  explicit TraderOptions(const rapidjson::Document& doc);
   
-  get_item_value(&exchange_id,
-                 doc,
-                 "/xtra_trader/exchange_id");
-  get_item_value(&participant_id,
-                 doc,
-                 "/xtra_trader/participant_id");
-  get_item_value(&user_id,
-                 doc,
-                 "/xtra_trader/user_id");
-  get_item_value(&password,
-                 doc,
-                 "/xtra_trader/password");
-  get_item_value(&client_id,
-                 doc,
-                 "/xtra_trader/client_id");
-  get_item_value(&front_address,
-                 doc,
-                 "/xtra_trader/front_address");
+  virtual ~TraderOptions();
 
-  return;
+  int exchange_id;
   
-}
+  std::string participant_id;
+  std::string user_id;
+  std::string password;
 
-TraderOptions::~TraderOptions(){
-}
+  std::string client_id;
+  
+  std::string front_address;
+};
 
-};  
+}  
+
+
+#endif 

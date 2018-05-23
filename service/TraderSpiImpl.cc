@@ -1,85 +1,97 @@
-#include "TraderSpiImpl.hh"
-#include "TraderServiceImpl.hh"
-#include "TraderOptions.hh"
-#include "XtraLog.hh"
+// Copyright 2017 The Xtra Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// -----------------------------------------------------------------------------
+// File: [file_name]
+// -----------------------------------------------------------------------------
+//
+// [file_descrition]
+//
+// Example:
+//
+//   ... ...
+//
+//
 
-#include "CXeleFtdcUserApiStructPrint.hh"
+#include <sstream>
 
-namespace xtra
-{
+#include "service/TraderSpiImpl.h"
+#include "service/TraderServiceImpl.h"
+#include "service/TraderOptions.h"
+#include "service/CXeleFtdcUserApiStructPrint.h"
+#include "soil/log.h"
+
+namespace xtra {
 
 TraderSpiImpl::TraderSpiImpl(TraderServiceImpl* service) :
-    service_(service)
-{
-  XTRA_TRACE <<"TraderSpiImpl::TraderSpiImpl()" ;
+    service_(service) {
+  SOIL_FUNC_TRACE;
 }
 
-TraderSpiImpl::~TraderSpiImpl()
-{
-  XTRA_TRACE <<"TraderSpiImpl::~TraderSpiImpl()" ;
+TraderSpiImpl::~TraderSpiImpl() {
+  SOIL_FUNC_TRACE;
 }
 
 /////////////////////////////////////////
 // impl from CXeleTraderSpi
 /////////////////////////////////////////
-void TraderSpiImpl::OnFrontConnected()
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnFrontConnected()" ;
+void TraderSpiImpl::OnFrontConnected() {
+  SOIL_FUNC_TRACE;
 
   service_->login();
 }
 
-void TraderSpiImpl::OnFrontDisconnected(int nReason)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnFrontDisconnected()" ;
-
-  XTRA_INFO <<"OnFrontDisconnected, the Reason is " <<std::hex <<nReason ;
+void TraderSpiImpl::OnFrontDisconnected(int nReason) {
+  SOIL_FUNC_TRACE;
+  SOIL_INFO("OnFrontDisconnected, the Reason is {:#x}", nReason);
 }
 
-void TraderSpiImpl::OnPackageStart(int nTopicID, int nSequenceNo)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnPackageStart()" ;
+void TraderSpiImpl::OnPackageStart(int nTopicID, int nSequenceNo) {
+  SOIL_FUNC_TRACE;
 
-  XTRA_INFO <<"nTopicID: " <<nTopicID
-            <<" nSequenceNo:" <<nSequenceNo;
+  SOIL_INFO("nTopicID: {}, nSequenceNo: {}", nTopicID, nSequenceNo);
 }
 
-void TraderSpiImpl::OnPackageEnd(int nTopicID, int nSequenceNo)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnPackageEnd()" ;
+void TraderSpiImpl::OnPackageEnd(int nTopicID, int nSequenceNo) {
+  SOIL_FUNC_TRACE;
 
-  XTRA_INFO <<"nTopicID: " <<nTopicID
-            <<" nSequenceNo:" <<nSequenceNo;
+  SOIL_INFO("nTopicID: {}, nSequenceNo: {}", nTopicID, nSequenceNo);
 }
 
-void TraderSpiImpl::OnRspError(CXeleFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspError()" ;
-
-  if( pRspInfo )
-    XTRA_PDU <<*pRspInfo;
+void TraderSpiImpl::OnRspError(
+  CXeleFtdcRspInfoField *pRspInfo, 
+  int nRequestID, 
+  bool bIsLast) {
+  SOIL_FUNC_TRACE;
   
+  SOIL_DEBUG_IF_PRINT(pRspInfo);
 }
 
 void TraderSpiImpl::OnRspUserLogin(CXeleFtdcRspUserLoginField *pRspUserLogin,
-                           CXeleFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspUserLogin()" ;
+                           CXeleFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  try
-  {
+  try  {
     checkRspInfo(pRspInfo);
     
-    XTRA_PDU <<*pRspUserLogin;
+    SOIL_DEBUG_IF_PRINT(pRspUserLogin);
 
     service_->initSession( pRspUserLogin );
                           
     if( bIsLast )
       service_->notify();
-
-  }
-  catch( ... )
-  {
+  }  catch (...)  {
   }
   
 }
@@ -87,29 +99,28 @@ void TraderSpiImpl::OnRspUserLogin(CXeleFtdcRspUserLoginField *pRspUserLogin,
 void TraderSpiImpl::OnRspUserLogout(CXeleFtdcRspUserLogoutField *pRspUserLogout,
                                     CXeleFtdcRspInfoField *pRspInfo,
                                     int nRequestID,
-                                    bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspUserLogout()" ;
+                                    bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  try
-  {
+  try {
     checkRspInfo(pRspInfo);
     
-    XTRA_PDU <<*pRspUserLogout;
+    SOIL_DEBUG_IF_PRINT(pRspUserLogout);
 
     if( bIsLast )
       service_->notify();
 
-  }
-  catch( ... )
-  {
+  } catch (...) {
   }
 
 }
 
-void TraderSpiImpl::OnRspOrderInsert(CXeleFtdcInputOrderField *pInputOrder, CXeleFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspOrderInsert()" ;
+void TraderSpiImpl::OnRspOrderInsert(
+  CXeleFtdcInputOrderField *pInputOrder, 
+  CXeleFtdcRspInfoField *pRspInfo,
+  int nRequestID, 
+  bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
   bool is_success = false;
   try
@@ -122,9 +133,9 @@ void TraderSpiImpl::OnRspOrderInsert(CXeleFtdcInputOrderField *pInputOrder, CXel
   {
   }
 
-  XTRA_PDU <<*pInputOrder;
+  SOIL_DEBUG_IF_PRINT(pInputOrder);
 
-  if( service_->callback() )
+  if (service_->callback() )
   {
     int order_ref = atoi(pInputOrder->OrderLocalID);
       
@@ -134,28 +145,25 @@ void TraderSpiImpl::OnRspOrderInsert(CXeleFtdcInputOrderField *pInputOrder, CXel
 
 }
 
-void TraderSpiImpl::OnRspQryClientAccount(CXeleFtdcRspClientAccountField *pClientAccount, CXeleFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspQryClientAccount()" ;
+void TraderSpiImpl::OnRspQryClientAccount(
+  CXeleFtdcRspClientAccountField *pClientAccount, 
+  CXeleFtdcRspInfoField *pRspInfo, 
+  int nRequestID, 
+  bool bIsLast) {
+  SOIL_FUNC_TRACE;
 
-  try
-  {
+  try {
     checkRspInfo(pRspInfo);
-    
-    XTRA_PDU <<*pClientAccount;
-  }
-  catch( ... )
-  {
+    SOIL_DEBUG_IF_PRINT(pClientAccount);
+  } catch (...) {
   }
 
 }
 
-void TraderSpiImpl::OnRtnTrade(CXeleFtdcTradeField *pTrade)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRtnTrade()" ;
+void TraderSpiImpl::OnRtnTrade(CXeleFtdcTradeField *pTrade) {
+  SOIL_FUNC_TRACE;
 
-  if( pTrade )
-    XTRA_PDU <<*pTrade;
+  SOIL_DEBUG_IF_PRINT(pTrade);
 
   if( service_->callback() )
   {
@@ -169,12 +177,10 @@ void TraderSpiImpl::OnRtnTrade(CXeleFtdcTradeField *pTrade)
 
 }
 
-void TraderSpiImpl::OnRtnOrder(CXeleFtdcOrderField *pOrder)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRtnOrder()" ;
+void TraderSpiImpl::OnRtnOrder(CXeleFtdcOrderField *pOrder) {
+  SOIL_FUNC_TRACE;
 
-  if( pOrder )
-    XTRA_PDU <<*pOrder;
+  SOIL_DEBUG_IF_PRINT(pOrder);
 
   if( service_->callback() )
   {
@@ -190,40 +196,40 @@ void TraderSpiImpl::OnRtnOrder(CXeleFtdcOrderField *pOrder)
 }
 
 
-void TraderSpiImpl::OnErrRtnOrderInsert(CXeleFtdcInputOrderField *pInputOrder, CXeleFtdcRspInfoField *pRspInfo)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OneErrRtnOrderInsert()" ;
+void TraderSpiImpl::OnErrRtnOrderInsert(
+  CXeleFtdcInputOrderField *pInputOrder, 
+  CXeleFtdcRspInfoField *pRspInfo) {
+  SOIL_FUNC_TRACE;
 
   try
   {
-    checkRspInfo(pRspInfo);
-    
+    checkRspInfo(pRspInfo); 
   }
   catch( ... )
   {
   }
 
-  XTRA_PDU <<*pInputOrder;
+  SOIL_DEBUG_IF_PRINT(pInputOrder);
 
-  if( service_->callback() )
-  {
+  if (service_->callback()) {
     int order_ref = atoi(pInputOrder->OrderLocalID);
       
     service_->callback()->onErrRtnOrderInsert( order_ref );
   }
-
-
 }
 
-void TraderSpiImpl::OnRspQryOrder(CXeleFtdcOrderField* pOrderField, CXeleFtdcRspInfoField* pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspQryOrder()";
+void TraderSpiImpl::OnRspQryOrder(
+  CXeleFtdcOrderField* pOrderField, 
+  CXeleFtdcRspInfoField* pRspInfo, 
+  int nRequestID, 
+  bool bIsLast) {
+  SOIL_FUNC_TRACE;
   
   try
   {
     checkRspInfo(pRspInfo);
     
-    XTRA_PDU <<*pOrderField;
+    SOIL_DEBUG_IF_PRINT(pOrderField);
   }
   catch( ... )
   {
@@ -232,15 +238,17 @@ void TraderSpiImpl::OnRspQryOrder(CXeleFtdcOrderField* pOrderField, CXeleFtdcRsp
   
 }
 
-void TraderSpiImpl::OnRspQryTrade(CXeleFtdcTradeField* pTradeField, CXeleFtdcRspInfoField* pRspInfo, int nRequestID, bool bIsLast)
-{
-  XTRA_TRACE <<"TraderSpiImpl::OnRspQryTrade()";
+void TraderSpiImpl::OnRspQryTrade(
+  CXeleFtdcTradeField* pTradeField, 
+  CXeleFtdcRspInfoField* pRspInfo, 
+  int nRequestID, 
+  bool bIsLast) {
+  SOIL_FUNC_TRACE;
   
   try
   {
     checkRspInfo(pRspInfo);
-    
-    XTRA_PDU <<*pTradeField;
+    SOIL_DEBUG_IF_PRINT(pTradeField);
   }
   catch( ... )
   {
@@ -248,12 +256,10 @@ void TraderSpiImpl::OnRspQryTrade(CXeleFtdcTradeField* pTradeField, CXeleFtdcRsp
 
 }
 
-void TraderSpiImpl::checkRspInfo(CXeleFtdcRspInfoField *pRspInfo)
-{
-  XTRA_TRACE <<"TraderSpiImpl::checkRspInfo()" ;
-
-  if( pRspInfo )
-    XTRA_PDU <<*pRspInfo ;
+void TraderSpiImpl::checkRspInfo(CXeleFtdcRspInfoField *pRspInfo) {
+  SOIL_FUNC_TRACE;
+  
+  SOIL_DEBUG_IF_PRINT(pRspInfo);
   
   bool result = ((pRspInfo) && (pRspInfo->ErrorID != 0));
   

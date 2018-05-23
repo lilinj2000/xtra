@@ -1,13 +1,38 @@
-#ifndef XTRA_TRADER_SERVICE_IMPL_HH
-#define XTRA_TRADER_SERVICE_IMPL_HH
+// Copyright 2017 The Xtra Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// -----------------------------------------------------------------------------
+// File: [file_name]
+// -----------------------------------------------------------------------------
+//
+// [file_descrition]
+//
+// Example:
+//
+//   ... ...
+//
+//
+
+#ifndef SERVICE_TRADER_SERVICE_IMPL_H_
+#define SERVICE_TRADER_SERVICE_IMPL_H_
 
 #include <memory>
 #include <atomic>
 
-#include "xtra/TraderService.hh"
+#include "xtra/TraderService.h"
 #include "CXeleTraderApi.hpp"
-
-#include "soil/STimer.hh"
+#include "soil/s_timer.h"
 
 namespace xtra
 {
@@ -19,7 +44,9 @@ class TraderServiceImpl : public TraderService
 {
  public:
 		
-  TraderServiceImpl(soil::Options* options, TraderServiceCallback* callback);
+  TraderServiceImpl(
+    const rapidjson::Document& doc, 
+    TraderServiceCallback* callback);
 		
   virtual ~TraderServiceImpl();
 
@@ -59,20 +86,17 @@ class TraderServiceImpl : public TraderService
   
   void notify();
 
-  TraderServiceCallback* callback() { return callback_; }
-
-  TraderOptions* options() { return options_; }
+  TraderServiceCallback* callback() { 
+    return callback_;
+  }
   
  protected:
-
   CXeleFtdcInputOrderField* orderField(int& order_ref);
 
   void orderGo(CXeleFtdcInputOrderField* req);
   
  private:
-  
-  TraderOptions* options_;
-    
+  std::unique_ptr<TraderOptions> options_;
   CXeleTraderApi* trader_api_;
   
   std::unique_ptr<TraderSpiImpl> trader_spi_;

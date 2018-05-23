@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = 
 
-noinst_PROGRAMS = unittest
+check_PROGRAMS = unittest
 
 unittest_SOURCES = \
 	TraderServiceImplTest.cc

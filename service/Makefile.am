@@ -8,10 +8,14 @@ libxtra_la_SOURCES = \
 libxtra_la_CPPFLAGS = -I$(top_srcdir) \
 			$(BOOST_CPPFLAGS) \
 			$(XELE_CPPFLAGS) \
+			$(RAPIDJSON_CPPFLAGS) \
+			$(FMT_CPPFLAGS) \
+			$(SPDLOG_CPPFLAGS) \
 			$(SOIL_CPPFLAGS)
 
 libxtra_la_LIBADD = $(XELE_LIBADD) \
 		$(BOOST_LIBADD) \
+		$(FMT_LIBADD) \
 		$(SOIL_LIBADD)
 
 libxtra_la_LDFLAGS = \
@@ -21,10 +25,9 @@ libxtra_la_LDFLAGS = \
 
 # header files
 noinst_HEADERS = \
-	TraderOptions.hh \
-	TraderServiceImpl.hh \
-	TraderSpiImpl.hh \
-	XtraLog.hh \
-	CXeleFtdcUserApiStructPrint.hh
+	TraderOptions.h \
+	TraderServiceImpl.h \
+	TraderSpiImpl.h \
+	CXeleFtdcUserApiStructPrint.h
 
 
