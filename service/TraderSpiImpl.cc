@@ -3,7 +3,7 @@
 
 #include "fmt/format.h"
 #include "TraderSpiImpl.hh"
-#include "soil/Log.hh"
+#include "soil/log.h"
 
 #include "CXeleFtdcUserApiStructPrint.hh"
 

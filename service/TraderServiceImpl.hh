@@ -5,8 +5,8 @@
 
 #include "xtra/TraderService.hh"
 #include "CXeleTraderApi.hpp"
-#include "soil/STimer.hh"
-#include "soil/json.hh"
+#include "soil/s_timer.h"
+#include "soil/json.h"
 
 namespace xtra {
 

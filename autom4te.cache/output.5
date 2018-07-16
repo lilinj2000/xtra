@@ -639,6 +639,13 @@ LIB@&t@OBJS
 GTEST_LIBADD
 GTEST_CPPFLAGS
 GTEST_HOME
+SPDLOG_CPPFLAGS
+SPDLOG_HOME
+FMT_LIBADD
+FMT_CPPFLAGS
+FMT_HOME
+RAPIDJSON_CPPFLAGS
+RAPIDJSON_HOME
 XELE_LIBADD
 XELE_CPPFLAGS
 XELE_HOME
@@ -787,6 +794,9 @@ enable_libtool_lock
 with_soil
 with_boost
 with_xele
+with_rapidjson
+with_fmt
+with_spdlog
 with_gtest
 '
       ac_precious_vars='build_alias
@@ -1443,7 +1453,11 @@ Optional Packages:
   --with-soil             home path of the soil, defaults to @S|@home_libs/soil
   --with-boost            home path of the boost, defaults to @S|@home_3rd/boost
   --with-xele             path of the xele api, defaults to @S|@XELE_HOME
-  --with-gtest            home path of the gtest, defaults to @S|@home_3rd/gtest
+  --with-rapidjson        home path of the rapidjson, defaults to
+                          @S|@RAPIDJSON_HOME
+  --with-fmt              home path of the fmt, defaults to @S|@FMT_HOME
+  --with-spdlog           home path of the spdlog, defaults to @S|@SPDLOG_HOME
+  --with-gtest            home path of the gtest, defaults to @S|@GTEST_HOME
 
 Some influential environment variables:
   CXX         C++ compiler command
@@ -15306,16 +15320,9 @@ LT_AGE=0
 
 
 
-home_3rd=~/3rd
-home_libs=~/libs
-
-if test -d /llj/3rd ; then
-   home_3rd=/llj/3rd
-fi
-
-if test -d /llj/libs ; then
-   home_libs=/llj/libs
-fi
+node=`uname -n`
+home_3rd=~/3rd/${node}
+home_libs=~/libs/${node}
 
 
 @%:@ Check whether --with-soil was given.
@@ -15343,19 +15350,15 @@ fi
 
 
 BOOST_CPPFLAGS="-I$BOOST_HOME/include -DBOOST_ALL_DYN_LINK"
-BOOST_LIBADD="$BOOST_HOME/lib/libboost_log_setup.so \
-              $BOOST_HOME/lib/libboost_log.so \
+BOOST_LIBADD=" \
 	      $BOOST_HOME/lib/libboost_filesystem.so \
-  	      $BOOST_HOME/lib/libboost_program_options.so \
 	      $BOOST_HOME/lib/libboost_regex.so \
-	      $BOOST_HOME/lib/libboost_thread.so \
-	      $BOOST_HOME/lib/libboost_chrono.so \
-	      $BOOST_HOME/lib/libboost_date_time.so \
 	      $BOOST_HOME/lib/libboost_system.so"
 
 
 
-XELE_HOME=$home_3rd/xeletrade_api_r965
+
+XELE_HOME=$home_3rd/xeletrade-traderapi-1.1.68
 
 @%:@ Check whether --with-xele was given.
 if test "${with_xele+set}" = set; then :
@@ -15371,12 +15374,57 @@ XELE_LIBADD="-L$XELE_HOME -lXeleTdAPI64"
 
 
 
+RAPIDJSON_HOME=$home_3rd/rapidjson
+
+@%:@ Check whether --with-rapidjson was given.
+if test "${with_rapidjson+set}" = set; then :
+  withval=$with_rapidjson; RAPIDJSON_HOME="$withval"
+else
+  RAPIDJSON_HOME="$RAPIDJSON_HOME"
+fi
+
+
+
+RAPIDJSON_CPPFLAGS="-I$RAPIDJSON_HOME/include -DRAPIDJSON_HAS_STDSTRING"
+
+
+FMT_HOME=$home_3rd/fmt
+
+@%:@ Check whether --with-fmt was given.
+if test "${with_fmt+set}" = set; then :
+  withval=$with_fmt; FMT_HOME="$withval"
+else
+  FMT_HOME="$FMT_HOME"
+fi
+
+
+
+FMT_CPPFLAGS="-I$FMT_HOME/include"
+FMT_LIBADD="-L$FMT_HOME/lib -lfmt"
+
+
+
+SPDLOG_HOME=$home_3rd/spdlog
+
+@%:@ Check whether --with-spdlog was given.
+if test "${with_spdlog+set}" = set; then :
+  withval=$with_spdlog; SPDLOG_HOME="$withval"
+else
+  SPDLOG_HOME="$SPDLOG_HOME"
+fi
+
+
+
+SPDLOG_CPPFLAGS="-I$SPDLOG_HOME/include -DSPDLOG_FMT_EXTERNAL"
+
+
+GTEST_HOME=$home_3rd/googletest
 
 @%:@ Check whether --with-gtest was given.
 if test "${with_gtest+set}" = set; then :
   withval=$with_gtest; GTEST_HOME="$withval"
 else
-  GTEST_HOME="$home_3rd/gtest"
+  GTEST_HOME="$GTEST_HOME"
 fi
 
 

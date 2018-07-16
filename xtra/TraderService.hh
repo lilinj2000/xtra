@@ -2,8 +2,8 @@
 #define XTRA_TRADER_SERVICE_HH
 
 #include <string>
-#include "soil/json.hh"
-#include "soil/Log.hh"
+#include "soil/json.h"
+#include "soil/log.h"
 
 namespace xtra {
 

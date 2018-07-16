@@ -6,8 +6,8 @@
 #include "TraderServiceImpl.hh"
 #include "TraderOptions.hh"
 #include "TraderSpiImpl.hh"
-#include "soil/Macro.hh"
-#include "soil/Log.hh"
+#include "soil/macro.h"
+#include "soil/log.h"
 
 #include "CXeleFtdcUserApiStructPrint.hh"
 

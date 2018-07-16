@@ -2,7 +2,7 @@
 #define XTRA_TRADER_OPTIONS_HH
 
 #include <string>
-#include "soil/json.hh"
+#include "soil/json.h"
 
 namespace xtra {
 

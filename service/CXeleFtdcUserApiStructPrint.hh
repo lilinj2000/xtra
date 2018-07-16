@@ -6,7 +6,7 @@
 
 #include <ostream>
 #include "CXeleFtdcUserApiStruct.h"
-#include "soil/json.hh"
+#include "soil/json.h"
 
 using rapidjson::StringBuffer;
 using rapidjson::PrettyWriter;
